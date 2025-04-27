@@ -1312,6 +1312,20 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           InferTypes.FIRST_KNOWN,
           OperandTypes.INTEGER_INTEGER.or(OperandTypes.BINARY_BINARY)
               .or(OperandTypes.UNSIGNED_NUMERIC_UNSIGNED_NUMERIC));
+  // Both operands should support bitwise operations
+
+  /**
+   * <code>{@code &}</code> operator.
+   */
+  public static final SqlBinaryOperator BITAND_OPERATOR =
+      new SqlBinaryOperator(
+          "&",
+          SqlKind.BITAND,
+          50,        // Higher precedence than XOR but lower than multiplication
+          true,
+          ReturnTypes.LARGEST_INT_OR_FIRST_NON_NULL,
+          InferTypes.FIRST_KNOWN,
+          OperandTypes.INTEGER_INTEGER.or(OperandTypes.BINARY_BINARY));
 
   /**
    * <code>BITNOT</code> scalar function.

@@ -16763,6 +16763,19 @@ public class SqlOperatorTest {
     f.checkType("CAST(2 AS SMALLINT) & CAST(6 AS SMALLINT)", "SMALLINT NOT NULL");
     f.checkType("CAST(2 AS BIGINT) & CAST(6 AS BIGINT)", "BIGINT NOT NULL");
 
+    // Mixed cases: negative signed integer with unsigned integer.
+    // Ensure consistency with MySQL semantics where negative values behave as all bits set.
+    f.checkScalar("CAST(1 AS INTEGER UNSIGNED) & CAST(255 AS INTEGER UNSIGNED)",
+        "1", "INTEGER UNSIGNED NOT NULL");
+    f.checkScalar("CAST(5 AS INTEGER UNSIGNED) & CAST(3 AS INTEGER UNSIGNED)",
+        "1", "INTEGER UNSIGNED NOT NULL");
+
+    // Pure unsigned cases: bitwise AND across unsigned integer families.
+    // Verify result type and range are preserved after the operation.
+    f.checkScalar("CAST(255 AS INTEGER UNSIGNED) & CAST(65535 AS INTEGER UNSIGNED)",
+        "255", "INTEGER UNSIGNED NOT NULL");
+    f.checkScalar("CAST(4294967295 AS BIGINT UNSIGNED) & CAST(255 AS BIGINT UNSIGNED)",
+        "255", "BIGINT UNSIGNED NOT NULL");
     // Binary type tests
     f.checkScalar("CAST(x'0201' AS BINARY(2)) & CAST(x'07f9' AS BINARY(2))", "0201",
         "BINARY(2) NOT NULL");
@@ -16771,7 +16784,7 @@ public class SqlOperatorTest {
 
     // Test invalid argument types
     f.checkFails("^1.2 & 2^",
-        "Cannot apply '&' to arguments of type '<DECIMAL\\(2, 1\\)> & <INTEGER>'\\. Supported form\\(s\\): '<INTEGER> & <INTEGER>'\\n'<BINARY> & <BINARY>'",
+        "Cannot apply '&' to arguments of type '<DECIMAL\\(2, 1\\)> & <INTEGER>'\\. Supported form\\(s\\): '<INTEGER> & <INTEGER>'\\n'<BINARY> & <BINARY>'\\n'<UNSIGNED_NUMERIC> & <UNSIGNED_NUMERIC>'",
         false);
 
     // NULL value tests

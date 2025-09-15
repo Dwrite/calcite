@@ -3418,6 +3418,7 @@ public class SqlFunctions {
 
     return new ByteString(result);
   }
+
   /**
    * Bitwise function <code>BITXOR</code> applied to {@link Long} values.
    * Returns {@code null} if any operand is null.

@@ -1323,10 +1323,12 @@ public class SqlStdOperatorTable extends ReflectiveSqlOperatorTable {
           SqlKind.BITAND,
           50,        // Higher precedence than XOR but lower than multiplication
           true,
-          ReturnTypes.LARGEST_INT_OR_FIRST_NON_NULL,
+          ReturnTypes.LEAST_RESTRICTIVE,
           InferTypes.FIRST_KNOWN,
           OperandTypes.INTEGER_INTEGER.or(OperandTypes.BINARY_BINARY)
-              .or(OperandTypes.UNSIGNED_NUMERIC_UNSIGNED_NUMERIC));
+              .or(OperandTypes.UNSIGNED_NUMERIC_UNSIGNED_NUMERIC)
+              .or(OperandTypes.family(SqlTypeFamily.UNSIGNED_NUMERIC, SqlTypeFamily.INTEGER)
+                  .or(OperandTypes.family(SqlTypeFamily.INTEGER, SqlTypeFamily.UNSIGNED_NUMERIC))));
 
   /**
    * <code>BITNOT</code> scalar function.

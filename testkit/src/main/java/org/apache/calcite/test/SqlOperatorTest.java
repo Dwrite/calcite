@@ -16640,6 +16640,11 @@ public class SqlOperatorTest {
     f.checkNull("CAST(NULL AS INTEGER UNSIGNED) << 2");
   }
 
+  /**
+   * Test cases for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7109">[CALCITE-7109]
+   * Implement SHIFT_LEFT operator </a>.
+   */
   @Test void testLeftShiftFunctionCall() {
     final SqlOperatorFixture f = fixture();
     f.setFor(SqlStdOperatorTable.BIT_LEFT_SHIFT, VmName.EXPAND);
@@ -16740,6 +16745,11 @@ public class SqlOperatorTest {
     f.checkNull("LEFTSHIFT(CAST(NULL AS INTEGER UNSIGNED), 2)");
   }
 
+  /**
+   * Test cases for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7184">[CALCITE-7184]
+   * Implement BIT_AND operator </a>.
+   */
   @Test void testBitAndOperatorScalarFunc() {
     final SqlOperatorFixture f = fixture();
     // Set the test fixture for the BITAND_OPERATOR
@@ -16776,6 +16786,98 @@ public class SqlOperatorTest {
         "255", "INTEGER UNSIGNED NOT NULL");
     f.checkScalar("CAST(4294967295 AS BIGINT UNSIGNED) & CAST(255 AS BIGINT UNSIGNED)",
         "255", "BIGINT UNSIGNED NOT NULL");
+    f.checkScalar("CAST(15 AS INTEGER UNSIGNED) & CAST(7 AS INTEGER)",
+        "7", "INTEGER UNSIGNED NOT NULL");
+    f.checkScalar("CAST(255 AS INTEGER UNSIGNED) & CAST(-1 AS INTEGER)",
+        "255", "INTEGER UNSIGNED NOT NULL");
+    f.checkScalar("CAST(128 AS INTEGER UNSIGNED) & CAST(127 AS INTEGER)",
+        "0", "INTEGER UNSIGNED NOT NULL");
+
+    // Test cases for ULong & Integer -> ULong
+    f.checkScalar("CAST(4294967295 AS BIGINT UNSIGNED) & CAST(255 AS INTEGER)",
+        "255", "BIGINT UNSIGNED NOT NULL");
+    f.checkScalar("CAST(1099511627775 AS BIGINT UNSIGNED) & CAST(-1 AS INTEGER)",
+        "1099511627775", "BIGINT UNSIGNED NOT NULL");
+    f.checkScalar("CAST(0 AS BIGINT UNSIGNED) & CAST(255 AS INTEGER)",
+        "0", "BIGINT UNSIGNED NOT NULL");
+
+    // Test cases for Integer & ULong -> ULong
+    f.checkScalar("CAST(-1 AS INTEGER) & CAST(4294967295 AS BIGINT UNSIGNED)",
+        "4294967295", "BIGINT UNSIGNED NOT NULL");
+    f.checkScalar("CAST(127 AS INTEGER) & CAST(255 AS BIGINT UNSIGNED)",
+        "127", "BIGINT UNSIGNED NOT NULL");
+    f.checkScalar("CAST(0 AS INTEGER) & CAST(1099511627775 AS BIGINT UNSIGNED)",
+        "0", "BIGINT UNSIGNED NOT NULL");
+
+    // Test cases for UShort & Integer -> Integer
+    f.checkScalar("CAST(255 AS SMALLINT UNSIGNED) & CAST(15 AS INTEGER)",
+        "15", "INTEGER NOT NULL");
+    f.checkScalar("CAST(65535 AS SMALLINT UNSIGNED) & CAST(-1 AS INTEGER)",
+        "65535", "INTEGER NOT NULL");
+    f.checkScalar("CAST(0 AS SMALLINT UNSIGNED) & CAST(255 AS INTEGER)",
+        "0", "INTEGER NOT NULL");
+
+    // Test cases for Integer & UShort -> Integer
+    f.checkScalar("CAST(-1 AS INTEGER) & CAST(255 AS SMALLINT UNSIGNED)",
+        "255", "INTEGER NOT NULL");
+    f.checkScalar("CAST(127 AS INTEGER) & CAST(128 AS SMALLINT UNSIGNED)",
+        "0", "INTEGER NOT NULL");
+    f.checkScalar("CAST(65535 AS INTEGER) & CAST(255 AS SMALLINT UNSIGNED)",
+        "255", "INTEGER NOT NULL");
+
+    // Edge cases with powers of 2
+    f.checkScalar("CAST(1024 AS INTEGER UNSIGNED) & CAST(512 AS INTEGER)",
+        "0", "INTEGER UNSIGNED NOT NULL");
+    f.checkScalar("CAST(1023 AS INTEGER UNSIGNED) & CAST(512 AS INTEGER)",
+        "512", "INTEGER UNSIGNED NOT NULL");
+
+    // Mixed operations with zero
+    f.checkScalar("CAST(0 AS INTEGER UNSIGNED) & CAST(-1 AS INTEGER)",
+        "0", "INTEGER UNSIGNED NOT NULL");
+    f.checkScalar("CAST(4294967295 AS BIGINT UNSIGNED) & CAST(0 AS INTEGER)",
+        "0", "BIGINT UNSIGNED NOT NULL");
+
+    // UInteger & Long -> ULong
+    f.checkScalar("CAST(255 AS INTEGER UNSIGNED) & CAST(127 AS BIGINT)",
+        "127", "BIGINT NOT NULL");
+    f.checkScalar("CAST(4294967295 AS INTEGER UNSIGNED) & CAST(-1 AS BIGINT)",
+        "-1", "BIGINT NOT NULL");
+    f.checkScalar("CAST(1024 AS INTEGER UNSIGNED) & CAST(512 AS BIGINT)",
+        "0", "BIGINT NOT NULL");
+    f.checkScalar("CAST(0 AS INTEGER UNSIGNED) & CAST(9223372036854775807 AS BIGINT)",
+        "0", "BIGINT NOT NULL");
+
+    // Long & UInteger -> ULong
+    f.checkScalar("CAST(-1 AS BIGINT) & CAST(255 AS INTEGER UNSIGNED)",
+        "255", "BIGINT NOT NULL");
+    f.checkScalar("CAST(127 AS BIGINT) & CAST(128 AS INTEGER UNSIGNED)",
+        "0", "BIGINT NOT NULL");
+    f.checkScalar("CAST(9223372036854775807 AS BIGINT) & CAST(1 AS INTEGER UNSIGNED)",
+        "1", "BIGINT NOT NULL");
+    f.checkScalar("CAST(0 AS BIGINT) & CAST(4294967295 AS INTEGER UNSIGNED)",
+        "0", "BIGINT NOT NULL");
+
+    // Edge cases with negative Long values
+    f.checkScalar("CAST(-128 AS BIGINT) & CAST(255 AS INTEGER UNSIGNED)",
+        "128", "BIGINT NOT NULL");
+    f.checkScalar("CAST(-256 AS BIGINT) & CAST(255 AS INTEGER UNSIGNED)",
+        "0", "BIGINT NOT NULL");
+
+    // Powers of 2 tests
+    f.checkScalar("CAST(65536 AS INTEGER UNSIGNED) & CAST(32768 AS BIGINT)",
+        "0", "BIGINT NOT NULL");
+    f.checkScalar("CAST(65535 AS INTEGER UNSIGNED) & CAST(32768 AS BIGINT)",
+        "32768", "BIGINT NOT NULL");
+
+    // Large number tests
+    f.checkScalar("CAST(4294967295 AS INTEGER UNSIGNED) & CAST(4294967296 AS BIGINT)",
+        "4294967296", "BIGINT NOT NULL");
+    f.checkScalar("CAST(4294967295 AS INTEGER UNSIGNED) & CAST(4294967295 AS BIGINT)",
+        "4294967295", "BIGINT NOT NULL");
+
+    // Mixed sign tests
+    f.checkScalar("CAST(4294967295 AS INTEGER UNSIGNED) & CAST(-4294967296 AS BIGINT)",
+        "-4294967296", "BIGINT NOT NULL");
     // Binary type tests
     f.checkScalar("CAST(x'0201' AS BINARY(2)) & CAST(x'07f9' AS BINARY(2))", "0201",
         "BINARY(2) NOT NULL");
@@ -16784,7 +16886,7 @@ public class SqlOperatorTest {
 
     // Test invalid argument types
     f.checkFails("^1.2 & 2^",
-        "Cannot apply '&' to arguments of type '<DECIMAL\\(2, 1\\)> & <INTEGER>'\\. Supported form\\(s\\): '<INTEGER> & <INTEGER>'\\n'<BINARY> & <BINARY>'\\n'<UNSIGNED_NUMERIC> & <UNSIGNED_NUMERIC>'",
+        "Cannot apply '&' to arguments of type '<DECIMAL\\(2, 1\\)> & <INTEGER>'\\. Supported form\\(s\\): '<INTEGER> & <INTEGER>'\\n'<BINARY> & <BINARY>'\\n'<UNSIGNED_NUMERIC> & <UNSIGNED_NUMERIC>'\\n'<UNSIGNED_NUMERIC> & <INTEGER>'\\n'<INTEGER> & <UNSIGNED_NUMERIC>'",
         false);
 
     // NULL value tests

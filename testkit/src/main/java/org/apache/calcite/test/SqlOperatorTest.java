@@ -16558,6 +16558,26 @@ public class SqlOperatorTest {
             + "'1970-01-01 01:23:46'])^",
         "Values passed to = SOME operator must have compatible types",
         false);
+
+    // Subquery path: type coercion between column and subquery output column.
+    f.checkBoolean(
+        "1 = some (select 1 from (values(1)) as t(x))", true);
+    f.checkBoolean(
+        "1.0 = some (select 1 from (values(1)))", true);
+    f.checkNull(
+        "1 = some (values(cast(null as integer)))");
+
+    f.checkBoolean("array[1] = some (array[array[1]])", true);
+    f.checkBoolean("array[1.0] = some (array[array[1]])", true);
+    // Test subquery with nested types
+    f.checkBoolean("array[1] = some (select array[1.0] from (values(1)))", true);
+
+    // Ensure invalid coercion still fails
+    f.enableTypeCoercion(false).checkFails(
+        "^array[1] = some (array['a'])^",
+        "Values passed to = SOME operator must have compatible types",
+        false);
+
   }
 
   @Test void testAnyValueFunc() {

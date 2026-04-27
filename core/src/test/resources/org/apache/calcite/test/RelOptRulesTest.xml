@@ -4283,6 +4283,23 @@ LogicalProject(PRODUCTID=[$0], NAME=[$1])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testEmptyWindow">
+    <Resource name="sql">
+      <![CDATA[select count(*) over () from emp where false]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[$9])
+  LogicalWindow(window#0=[window(aggs [COUNT()])])
+    LogicalValues(tuples=[[]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalValues(tuples=[[]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testEnumerableCalcRule">
     <Resource name="sql">
       <![CDATA[select FNAME, LNAME

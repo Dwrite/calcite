@@ -5753,6 +5753,19 @@ class RelOptRulesTest extends RelOptTestBase {
   }
 
   /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7490">[CALCITE-7490]
+   * PruneEmptyRules is ineffective for window statements</a>. */
+  @Test void testEmptyWindow() {
+    final String sql = "select count(*) over () from emp where false";
+    sql(sql)
+        .withPreRule(CoreRules.PROJECT_TO_LOGICAL_PROJECT_AND_WINDOW,
+            CoreRules.FILTER_REDUCE_EXPRESSIONS)
+        .withRule(PruneEmptyRules.WINDOW_INSTANCE,
+            PruneEmptyRules.PROJECT_INSTANCE)
+        .check();
+  }
+
+  /** Test case for
    * <a href="https://issues.apache.org/jira/browse/CALCITE-5117">[CALCITE-5117]
    * Optimize the EXISTS sub-query by Metadata RowCount</a>. */
   @Test void testExistsWithAtLeastOneRowSubQuery() {

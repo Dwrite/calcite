@@ -12321,4 +12321,93 @@ class RelOptRulesTest extends RelOptTestBase {
         .withRule(CoreRules.PROJECT_FILTER_VALUES_MERGE)
         .checkUnchanged();
   }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7497">[CALCITE-7497]
+   * Enable Lambda supports constant folding</a>.
+   */
+  @Test void testReduceLambdaBodyConstantFolding() {
+    final String sql = "select \"EXISTS\"(ARRAY[1, 2, 3], x -> x > 1 + 2)";
+    sql(sql)
+        .withFactory(f ->
+            f.withOperatorTable(opTab ->
+                SqlValidatorTest.operatorTableFor(SqlLibrary.SPARK)))
+        .withRule(CoreRules.PROJECT_REDUCE_EXPRESSIONS).check();
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7497">[CALCITE-7497]
+   * Enable Lambda supports constant folding</a>.
+   *
+   * <p>Boolean constant expression {@code 1 < 2} in lambda body should be
+   * folded to {@code true}. */
+  @Test void testReduceLambdaBodyBooleanConstantFolding() {
+    final String sql = "select \"EXISTS\"(ARRAY[1, 2, 3], x -> x > 1 AND 1 < 2)";
+    sql(sql)
+        .withFactory(f ->
+            f.withOperatorTable(opTab ->
+                SqlValidatorTest.operatorTableFor(SqlLibrary.SPARK)))
+        .withRule(CoreRules.PROJECT_REDUCE_EXPRESSIONS).check();
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7497">[CALCITE-7497]
+   * Enable Lambda supports constant folding</a>.
+   *
+   * <p>Negative constant arithmetic {@code -1 * -2} in lambda body should be
+   * folded to {@code 2}. */
+  @Test void testReduceLambdaBodyNegativeConstantFolding() {
+    final String sql = "select \"EXISTS\"(ARRAY[1, 2, 3], x -> x > -1 * -2)";
+    sql(sql)
+        .withFactory(f ->
+            f.withOperatorTable(opTab ->
+                SqlValidatorTest.operatorTableFor(SqlLibrary.SPARK)))
+        .withRule(CoreRules.PROJECT_REDUCE_EXPRESSIONS).check();
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7497">[CALCITE-7497]
+   * Enable Lambda supports constant folding</a>.
+   *
+   * <p>MOD function with constant arguments {@code MOD(10, 3)} in lambda body
+   * should be folded to {@code 1}. */
+  @Test void testReduceLambdaBodyModConstantFolding() {
+    final String sql = "select \"EXISTS\"(ARRAY[1, 2, 3], x -> x > MOD(10, 3))";
+    sql(sql)
+        .withFactory(f ->
+            f.withOperatorTable(opTab ->
+                SqlValidatorTest.operatorTableFor(SqlLibrary.SPARK)))
+        .withRule(CoreRules.PROJECT_REDUCE_EXPRESSIONS).check();
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7497">[CALCITE-7497]
+   * Enable Lambda supports constant folding</a>.
+   *
+   * <p>OR-connected constant expressions {@code 1 + 2} and {@code 10 - 3}
+   * in lambda body should each be folded independently. */
+  @Test void testReduceLambdaBodyOrConstantFolding() {
+    final String sql = "select \"EXISTS\"(ARRAY[1, 2, 3], x -> x > 1 + 2 OR x < 10 - 3)";
+    sql(sql)
+        .withFactory(f ->
+            f.withOperatorTable(opTab ->
+                SqlValidatorTest.operatorTableFor(SqlLibrary.SPARK)))
+        .withRule(CoreRules.PROJECT_REDUCE_EXPRESSIONS).check();
+  }
+
+  /** Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7497">[CALCITE-7497]
+   * Enable Lambda supports constant folding</a>.
+   *
+   * <p>Deeply nested constant expression {@code (1 + 2) * (3 + 4)} in lambda
+   * body should be fully folded to {@code 21}. */
+  @Test void testReduceLambdaBodyDeepNestedConstantFolding() {
+    final String sql = "select \"EXISTS\"(ARRAY[1, 2, 3], x -> x > (1 + 2) * (3 + 4))";
+    sql(sql)
+        .withFactory(f ->
+            f.withOperatorTable(opTab ->
+                SqlValidatorTest.operatorTableFor(SqlLibrary.SPARK)))
+        .withRule(CoreRules.PROJECT_REDUCE_EXPRESSIONS).check();
+  }
+
 }

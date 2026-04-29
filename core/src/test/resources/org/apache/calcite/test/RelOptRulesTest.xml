@@ -16933,6 +16933,108 @@ LogicalProject(EXPR$0=[EXISTS(ARRAY(1), (X) -> true)])
 ]]>
     </Resource>
   </TestCase>
+  <TestCase name="testReduceLambdaBodyBooleanConstantFolding">
+    <Resource name="sql">
+      <![CDATA[select "EXISTS"(ARRAY[1, 2, 3], x -> x > 1 AND 1 < 2)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> AND(>(X, 1), <(1, 2)))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> AND(>(X, 1), true))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReduceLambdaBodyConstantFolding">
+    <Resource name="sql">
+      <![CDATA[select "EXISTS"(ARRAY[1, 2, 3], x -> x > 1 + 2)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> >(X, +(1, 2)))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> >(X, 3))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReduceLambdaBodyDeepNestedConstantFolding">
+    <Resource name="sql">
+      <![CDATA[select "EXISTS"(ARRAY[1, 2, 3], x -> x > (1 + 2) * (3 + 4))]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> >(X, *(+(1, 2), +(3, 4))))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> >(X, 21))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReduceLambdaBodyModConstantFolding">
+    <Resource name="sql">
+      <![CDATA[select "EXISTS"(ARRAY[1, 2, 3], x -> x > MOD(10, 3))]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> >(X, MOD(10, 3)))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> >(X, 1))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReduceLambdaBodyNegativeConstantFolding">
+    <Resource name="sql">
+      <![CDATA[select "EXISTS"(ARRAY[1, 2, 3], x -> x > -1 * -2)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> >(X, *(-1, -2)))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> >(X, 2))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+  </TestCase>
+  <TestCase name="testReduceLambdaBodyOrConstantFolding">
+    <Resource name="sql">
+      <![CDATA[select "EXISTS"(ARRAY[1, 2, 3], x -> x > 1 + 2 OR x < 10 - 3)]]>
+    </Resource>
+    <Resource name="planBefore">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> OR(>(X, +(1, 2)), <(X, -(10, 3))))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+    <Resource name="planAfter">
+      <![CDATA[
+LogicalProject(EXPR$0=[EXISTS(ARRAY(1, 2, 3), (X) -> OR(>(X, 3), <(X, 7)))])
+  LogicalValues(tuples=[[{ 0 }]])
+]]>
+    </Resource>
+  </TestCase>
   <TestCase name="testReduceNestedCaseWhen">
     <Resource name="sql">
       <![CDATA[select sal

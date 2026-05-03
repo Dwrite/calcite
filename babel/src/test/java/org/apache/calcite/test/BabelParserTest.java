@@ -16,6 +16,7 @@
  */
 package org.apache.calcite.test;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlNode;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
@@ -291,6 +292,15 @@ class BabelParserTest extends SqlParserTest {
     final String expected = ""
         + "SELECT (- ('12' || '.34') :: VARCHAR(30) :: INTEGER) AS `X`\n"
         + "FROM `T`";
+    sql(sql).ok(expected);
+  }
+
+  /** Tests parsing PostgreSQL-style "::" cast operator. */
+  @Test void testParseInfixCastWithMulType()  {
+    final String sql = " select 'test'::varchar array [1].field";
+    final String expected = " SELECT 'test' :: (VARCHAR ARRAY [1].`FIELD`)";
+    SqlNode node = sql(sql).node();
+    System.out.println("node : " + node);
     sql(sql).ok(expected);
   }
 

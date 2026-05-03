@@ -193,6 +193,39 @@ SqlCreate SqlCreateTable(Span s, boolean replace) :
 |   < TILDE: "~" >
 }
 
+/**
+ * A restricted variant of DataType() for use in PostgreSQL-style
+ * infix cast (::) expressions.
+ *
+ * The difference from DataType() is that we call TypeName() directly
+ * and skip the CollectionsTypeName() loop. We then handle the ARRAY
+ * keyword ourselves — consuming the keyword but NOT the [n] subscript
+ * that follows, leaving it for the postfix expression layer.
+ */
+SqlDataTypeSpec InfixCastDataType() :
+{
+    SqlTypeNameSpec typeName;
+    final Span s;
+}
+{
+    typeName = TypeName() {
+        s = Span.of(typeName.getParserPos());
+    }
+    [
+        <ARRAY> {
+            // Mirror exactly what CollectionsTypeName() does,
+            // but stop before consuming [n]
+            typeName = new SqlCollectionTypeNameSpec(
+                typeName,
+                SqlTypeName.ARRAY,
+                getPos()
+            );
+        }
+    ]
+    {
+        return new SqlDataTypeSpec(typeName, s.add(typeName.getParserPos()).pos());
+    }
+}
 /** Parses the infix "::" cast operator used in PostgreSQL. */
 void InfixCast(List<Object> list, ExprContext exprContext, Span s) :
 {
@@ -202,12 +235,21 @@ void InfixCast(List<Object> list, ExprContext exprContext, Span s) :
     <INFIX_CAST> {
         checkNonQueryExpression(exprContext);
     }
-    dt = DataType() {
+    dt = InfixCastDataType() {
         list.add(
-            new SqlParserUtil.ToTreeListItem(SqlLibraryOperators.INFIX_CAST,
-                s.pos()));
+            new SqlParserUtil.ToTreeListItem(
+                SqlLibraryOperators.INFIX_CAST, s.pos()));
         list.add(dt);
     }
+    // Explicitly handle postfix operations on the cast result
+    (
+        <LBRACKET>
+        // ... array access
+        <RBRACKET>
+    |
+        <DOT>
+        // ... field access
+    )*
 }
 
 /** Parses the NULL-safe "<=>" equal operator used in MySQL. */

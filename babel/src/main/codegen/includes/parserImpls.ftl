@@ -196,7 +196,6 @@ SqlCreate SqlCreateTable(Span s, boolean replace) :
 /**
  * A restricted variant of DataType() for use in PostgreSQL-style
  * infix cast (::) expressions.
- *
  * The difference from DataType() is that we call TypeName() directly
  * and skip the CollectionsTypeName() loop. We then handle the ARRAY
  * keyword ourselves — consuming the keyword but NOT the [n] subscript
@@ -230,25 +229,30 @@ SqlDataTypeSpec InfixCastDataType() :
 void InfixCast(List<Object> list, ExprContext exprContext, Span s) :
 {
     final SqlDataTypeSpec dt;
+    SqlNode e, p;
 }
 {
     <INFIX_CAST> {
         checkNonQueryExpression(exprContext);
     }
     dt = InfixCastDataType() {
-        list.add(
-            new SqlParserUtil.ToTreeListItem(
-                SqlLibraryOperators.INFIX_CAST, s.pos()));
-        list.add(dt);
+        SqlNode leftOperand = (SqlNode) list.remove(list.size() - 1);
+        SqlNode castNode = SqlLibraryOperators.INFIX_CAST.createCall(
+        s.pos(), leftOperand, dt);
+        list.add(castNode);
     }
-    // Explicitly handle postfix operations on the cast result
-    (
-        <LBRACKET>
-        // ... array access
-        <RBRACKET>
+    (   <LBRACKET>
+        e = Expression(ExprContext.ACCEPT_SUB_QUERY)
+        <RBRACKET> {
+            SqlNode current = (SqlNode) list.remove(list.size() - 1);
+            list.add(SqlStdOperatorTable.ITEM.createCall(getPos(), current, e));
+        }
     |
         <DOT>
-        // ... field access
+        p = SimpleIdentifier() {
+            SqlNode current = (SqlNode) list.remove(list.size() - 1);
+            list.add(SqlStdOperatorTable.DOT.createCall(getPos(), current, p));
+        }
     )*
 }
 

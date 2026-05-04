@@ -15,8 +15,11 @@
  * limitations under the License.
  */
 package org.apache.calcite.test;
+import org.apache.calcite.sql.SqlBasicCall;
 import org.apache.calcite.sql.SqlDialect;
+import org.apache.calcite.sql.SqlKind;
 import org.apache.calcite.sql.SqlNode;
+import org.apache.calcite.sql.SqlSelect;
 import org.apache.calcite.sql.dialect.MysqlSqlDialect;
 import org.apache.calcite.sql.dialect.PostgresqlSqlDialect;
 import org.apache.calcite.sql.dialect.SparkSqlDialect;
@@ -295,13 +298,43 @@ class BabelParserTest extends SqlParserTest {
     sql(sql).ok(expected);
   }
 
-  /** Tests parsing PostgreSQL-style "::" cast operator. */
-  @Test void testParseInfixCastWithMulType()  {
-    final String sql = " select 'test'::varchar array [1].field";
-    final String expected = " SELECT 'test' :: (VARCHAR ARRAY [1].`FIELD`)";
-    SqlNode node = sql(sql).node();
-    System.out.println("node : " + node);
+  /**
+   * Test case for
+   * <a href="https://issues.apache.org/jira/browse/CALCITE-7475">[CALCITE-7475]
+   * Babel parser allows postfix access after PostgreSQL-style {@code ::} infix cast</a>.
+   *
+   * <p>Verifies that PostgreSQL-style infix cast ({@code ::}) correctly binds
+   * tighter than postfix access operators such as array indexing ({@code []})
+   * and field access ({@code .}).
+   */
+  @Test void testParseInfixCastWithPostfixAccess() {
+    final String sql = "select 'test'::varchar array[1].field";
+
+    // 1. Verify the unparsed SQL string.
+    // Calcite's unparser adds parentheses to reflect the correct AST precedence.
+    final String expected = "SELECT ('test' :: VARCHAR ARRAY[1].`FIELD`)";
     sql(sql).ok(expected);
+
+    // 2. Verify the internal AST structure.
+    SqlNode node = sql(sql).node();
+    SqlSelect select = (SqlSelect) node;
+    SqlNode firstItem = select.getSelectList().get(0);
+
+    // The top-level operator should be DOT (.)
+    assertThat(firstItem.getKind(), is(SqlKind.DOT));
+    SqlBasicCall dotCall = (SqlBasicCall) firstItem;
+
+    // The left operand of DOT should be ITEM ([])
+    SqlNode dotLeft = dotCall.operand(0);
+    assertThat(((SqlBasicCall) dotLeft).getOperator().getName(), is("ITEM"));
+
+    // The left operand of ITEM should be the INFIX_CAST (::)
+    SqlNode itemLeft = ((SqlBasicCall) dotLeft).operand(0);
+    assertThat(itemLeft.getKind(), is(SqlKind.CAST));
+
+    // The right operand of CAST should be exactly 'VARCHAR ARRAY' without any subscripts.
+    SqlNode castRight = ((SqlBasicCall) itemLeft).operand(1);
+    assertThat(castRight, hasToString("VARCHAR ARRAY"));
   }
 
   private void checkParseInfixCast(String sqlType) {
